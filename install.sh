@@ -2,6 +2,7 @@
 echo Installing ballsOS
 rm -rf /var/tmp/ballsOS
 
+sudo pacman -Sy unzip git --noconfirm
 curl -fsSL https://bun.com/install | bash
 
 git clone https://github.com/Kennubyte/ballsOS.git /var/tmp/ballsOS
