@@ -13,6 +13,7 @@ fi
 # STEP 2: Now that 'unzip' is definitely installed, install Bun.
 echo "Installing the Bun runtime..."
 curl -fsSL https://bun.com/install | bash
+source /root/.bash_profile
 
 git clone https://github.com/Kennubyte/ballsOS.git /var/tmp/ballsOS
 cd /var/tmp/ballsOS
