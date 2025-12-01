@@ -2,6 +2,8 @@
 echo Installing ballsOS
 rm -rf /var/tmp/ballsOS
 
+curl -fsSL https://bun.com/install | bash
+
 git clone https://github.com/Kennubyte/ballsOS.git /var/tmp/ballsOS
 cd /var/tmp/ballsOS
 

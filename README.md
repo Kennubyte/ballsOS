@@ -4,4 +4,4 @@
 
 
 
-curl -sL https://raw.githubusercontent.com/Kennubyte/ballsOS/main/install.sh | bash
+sudo curl -sL https://raw.githubusercontent.com/Kennubyte/ballsOS/main/install.sh | bash
