@@ -15,6 +15,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/matthewhartstonge/argon2"
@@ -148,16 +149,24 @@ func registerUser(username, password string) error {
 func main() {
 	log.Println("Starting auth server")
 	ctx = context.Background()
-
 	var err error
+	err = godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	privateKey, err = rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Println("Error generating RSA private key:", err)
 		os.Exit(1)
 	}
 
+	postgresPassword := os.Getenv("POSTGRES_PASSWORD")
+	if postgresPassword == "" {
+		log.Fatal("POSTGRES_PASSWORD environment variable not set")
+	}
 	// Connect to Postgres
-	sqldb, err := sql.Open("pgx", "postgres://postgres:rOTSnSxZVlCLPEDyg7B3G1yhuw-CEErMZ17d_8FOLv3jVI1EwBc5XLuEvcrhozjh@localhost:5432/postgres?sslmode=disable")
+	sqldb, err := sql.Open("pgx", "postgres://postgres:"+postgresPassword+"@127.0.0.1:5432/postgres?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
