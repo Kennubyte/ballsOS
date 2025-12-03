@@ -21,7 +21,7 @@ cd /var/tmp/ballsOS
 mkdir -p /opt/ballsOS/web-ui
 cp -r management/* /opt/ballsOS/web-ui/
 
-POSTGRES_PASS=$(openssl rand -base64 48 | tr -d '\n')
+POSTGRES_PASS=$(openssl rand -base64 48 | tr '+/' '-_' | tr -d '\n')
 docker run --name ballsOS-postgres -p 5432:5432 -e POSTGRES_PASSWORD=$POSTGRES_PASS -e POSTGRES_DB=ballsOS -d postgres
 echo "POSTGRES_PASSWORD=$POSTGRES_PASS" >> /opt/ballsOS/.env
 

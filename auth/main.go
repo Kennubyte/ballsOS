@@ -4,7 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"database/sql"
+	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,11 +24,38 @@ import (
 
 var Db *bun.DB
 var ctx context.Context
+var privateKey *rsa.PrivateKey
 
 type users struct {
 	ID       int64  `bun:",pk,autoincrement"`
 	Username string `bun:",unique,notnull"`
 	Hash     string `bun:",notnull"`
+}
+
+var (
+	fetchUserHash    = defaultFetchUserHash
+	insertUserRecord = defaultInsertUserRecord
+	signToken        = defaultSignToken
+)
+
+func defaultFetchUserHash(ctx context.Context, username string) (string, error) {
+	var hash string
+	err := Db.NewSelect().
+		Table("users").
+		Column("hash").
+		Where("username = ?", username).
+		Limit(1).
+		Scan(ctx, &hash)
+	return hash, err
+}
+
+func defaultInsertUserRecord(ctx context.Context, user *users) error {
+	_, err := Db.NewInsert().Model(user).Exec(ctx)
+	return err
+}
+
+func defaultSignToken(tok jwt.Token) ([]byte, error) {
+	return jwt.Sign(tok, jwt.WithKey(jwa.RS256(), privateKey))
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,9 +68,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
-	var hash string
-	selectQuery := Db.NewSelect().Table("users").Column("username", "hash").Where("username = ?", username).Limit(1).Scan(ctx, &username, &hash)
-	if selectQuery != nil {
+	hash, err := fetchUserHash(ctx, username)
+	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -61,21 +90,44 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		fmt.Println("Error generating RSA private key:", err)
-		os.Exit(1)
-	}
-
 	// Sign a JWT!
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), privateKey))
+	signed, err := signToken(tok)
 	if err != nil {
 		fmt.Printf("failed to sign token: %s\n", err)
 		return
 	}
 
 	log.Println(string(signed))
-	w.Write([]byte("Authentication request received"))
+	response := struct {
+		Username string
+		Token    string
+	}{
+		Username: username,
+		Token:    string(signed),
+	}
+
+	jsonData, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(jsonData)
+}
+
+func servePublicKey(w http.ResponseWriter, r *http.Request) {
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	pemBytes := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubKeyBytes,
+	})
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write(pemBytes)
 }
 
 func registerUser(username, password string) error {
@@ -83,23 +135,29 @@ func registerUser(username, password string) error {
 
 	encoded, err := argon.HashEncoded([]byte(password))
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	user := &users{
 		Username: username,
 		Hash:     string(encoded),
 	}
-	_, err = Db.NewInsert().Model(user).Exec(ctx)
-	return err
+	return insertUserRecord(ctx, user)
 }
 
 func main() {
 	log.Println("Starting auth server")
 	ctx = context.Background()
 
+	var err error
+	privateKey, err = rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		fmt.Println("Error generating RSA private key:", err)
+		os.Exit(1)
+	}
+
 	// Connect to Postgres
-	sqldb, err := sql.Open("pgx", "postgres://postgres:0VnbUoLVhKRy0hJ1KoTPr4JfiBzNZo44yi51+GkVE9YgK+hmG63mYFW4C6hnU3WI@localhost:5432/postgres?sslmode=disable")
+	sqldb, err := sql.Open("pgx", "postgres://postgres:rOTSnSxZVlCLPEDyg7B3G1yhuw-CEErMZ17d_8FOLv3jVI1EwBc5XLuEvcrhozjh@localhost:5432/postgres?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
@@ -114,5 +172,6 @@ func main() {
 	Db.NewCreateTable().Model((*users)(nil)).Exec(ctx)
 
 	http.HandleFunc("/", loginHandler)
+	http.HandleFunc("/publickey", servePublicKey)
 	http.ListenAndServe("127.0.0.1:8080", nil)
 }
