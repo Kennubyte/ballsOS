@@ -18,6 +18,7 @@ source /root/.bash_profile
 git clone https://github.com/Kennubyte/ballsOS.git /var/tmp/ballsOS
 cd /var/tmp/ballsOS
 
+mkdir -p /opt/ballsOS/auth
 mkdir -p /opt/ballsOS/web-ui
 cp -r management/* /opt/ballsOS/web-ui/
 
