@@ -98,7 +98,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(string(signed))
 	response := struct {
 		Username string
 		Token    string
@@ -131,6 +130,49 @@ func servePublicKey(w http.ResponseWriter, r *http.Request) {
 	w.Write(pemBytes)
 }
 
+func verifyToken(w http.ResponseWriter, r *http.Request) {
+	// Only allow POST requests
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tokenString := r.Header.Get("Authorization")
+	if tokenString == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString = tokenString[len("Bearer "):]
+
+	verifiedToken, err := jwt.Parse([]byte(tokenString), jwt.WithKey(jwa.RS256(), &privateKey.PublicKey))
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	subject, ok := verifiedToken.Subject()
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	response := struct {
+		Valid   bool
+		Subject string
+	}{
+		Valid:   true,
+		Subject: subject,
+	}
+
+	jsonData, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(jsonData)
+}
+
 func registerUser(username, password string) error {
 	argon := argon2.DefaultConfig()
 
@@ -152,26 +194,26 @@ func main() {
 	var err error
 	err = godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		panic(err)
 	}
 
 	privateKey, err = rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		fmt.Println("Error generating RSA private key:", err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	postgresPassword := os.Getenv("POSTGRES_PASSWORD")
 	if postgresPassword == "" {
-		log.Fatal("POSTGRES_PASSWORD environment variable not set")
+		panic("POSTGRES_PASSWORD not set in environment")
 	}
 	// Connect to Postgres
 	sqldb, err := sql.Open("pgx", "postgres://postgres:"+postgresPassword+"@127.0.0.1:5432/postgres?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
+
 	if err := sqldb.PingContext(ctx); err != nil {
-		log.Fatalf("unable to connect to Postgres: %v", err)
+		panic(err)
 	}
 
 	// Create Bun ( not the javascript runtime dummy ) instance
@@ -181,6 +223,7 @@ func main() {
 	Db.NewCreateTable().Model((*users)(nil)).Exec(ctx)
 
 	http.HandleFunc("/", loginHandler)
+	http.HandleFunc("/verify", verifyToken)
 	http.HandleFunc("/publickey", servePublicKey)
 	http.ListenAndServe("127.0.0.1:8080", nil)
 }
