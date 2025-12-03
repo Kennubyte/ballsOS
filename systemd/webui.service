@@ -9,7 +9,7 @@ Restart=always
 RestartSec=1
 User=root
 WorkingDirectory=/opt/ballsOS/web-ui/
-ExecStart=bun start
+ExecStart=/root/.bun/bin/bun start
 
 [Install]
 WantedBy=multi-user.target

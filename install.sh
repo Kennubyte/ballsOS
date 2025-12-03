@@ -37,11 +37,11 @@ bun run build
 
 # Build auth provider
 cd /var/tmp/ballsOS/auth
-go build -o /opt/ballsOS/auth/ &
+go build -o /opt/ballsOS/auth/
 
 # Build resource monitor
 cd /var/tmp/ballsOS/resource-monitor
-go build -o /opt/ballsOS/resource-monitor/ &
+go build -o /opt/ballsOS/resource-monitor/
 
 # Set up PostgreSQL
 POSTGRES_PASS=$(openssl rand -base64 48 | tr '+/' '-_' | tr -d '\n')
@@ -53,9 +53,6 @@ echo "POSTGRES_PASSWORD=$POSTGRES_PASS" > /opt/ballsOS/resource-monitor/.env
 
 # Move systemd service files
 mv /var/tmp/ballsOS/systemd/* /etc/systemd/system/
-
-# wait for compilation to finish
-wait
 
 # Enable services
 systemctl daemon-reload
