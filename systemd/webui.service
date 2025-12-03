@@ -1,0 +1,15 @@
+[Unit]
+Description=Webui service for ballsOS
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+WorkingDirectory=/opt/ballsOS/web-ui/
+ExecStart=bun start
+
+[Install]
+WantedBy=multi-user.target

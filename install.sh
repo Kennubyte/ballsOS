@@ -33,7 +33,7 @@ mkdir -p /opt/ballsOS/resource-monitor
 cp -r management/* /opt/ballsOS/web-ui/
 cd /opt/ballsOS/web-ui/
 bun install
-bun run build &
+bun run build
 
 # Build auth provider
 cd /var/tmp/ballsOS/auth
@@ -61,10 +61,12 @@ wait
 systemctl daemon-reload
 systemctl enable auth-provider.service
 systemctl enable resource-monitor.service
+systemctl enable webui.service
 
 # Start services
 systemctl start auth-provider.service
 systemctl start resource-monitor.service
+systemctl start webui.service
 
 # Clean up broski, you nasty
 echo Cleaning up.
