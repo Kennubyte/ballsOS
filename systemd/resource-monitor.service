@@ -1,0 +1,15 @@
+[Unit]
+Description=Resource monitoring service for ballsOS
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+WorkingDirectory=/opt/ballsOS/resource-monitor
+ExecStart=/opt/ballsOS/resource-monitor/resource-monitor
+
+[Install]
+WantedBy=multi-user.target
