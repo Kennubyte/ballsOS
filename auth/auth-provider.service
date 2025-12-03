@@ -1,0 +1,15 @@
+[Unit]
+Description=Authentication service for ballsOS
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+WorkingDirectory=/opt/ballsOS/auth
+ExecStart=/opt/ballsOS/auth/auth
+
+[Install]
+WantedBy=multi-user.target

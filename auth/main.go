@@ -225,5 +225,5 @@ func main() {
 	http.HandleFunc("/", loginHandler)
 	http.HandleFunc("/verify", verifyToken)
 	http.HandleFunc("/publickey", servePublicKey)
-	http.ListenAndServe("127.0.0.1:8080", nil)
+	http.ListenAndServe("127.0.0.1:55555", nil)
 }
